@@ -1,6 +1,20 @@
 namespace CleanPulse.Core.Models;
 
 /// <summary>
+/// User-defined folder/pattern rule for regular cleanup.
+/// </summary>
+public sealed class CustomCleanupRule
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString("N")[..8];
+    public string Name { get; set; } = string.Empty;
+    public string FolderPath { get; set; } = string.Empty;
+    public string SearchPattern { get; set; } = "*";
+    public bool Recursive { get; set; } = true;
+    public bool RespectMinimumAge { get; set; } = true;
+    public bool MoveToRecycleBin { get; set; } = true;
+}
+
+/// <summary>
 /// User preferences persisted locally in %LOCALAPPDATA%\CleanPulse\settings.json.
 /// </summary>
 public sealed class AppSettings
@@ -9,8 +23,11 @@ public sealed class AppSettings
     public string Theme { get; set; } = "Dark";
     public int MinimumFileAgeHours { get; set; } = 24;
     public bool ConfirmBeforeClean { get; set; } = true;
+    public bool AutoAnalyzeOnStartup { get; set; } = false;
+    public ScheduleFrequency ScheduledCleanFrequency { get; set; } = ScheduleFrequency.Disabled;
     public Dictionary<string, bool> CategorySelection { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public List<string> Exclusions { get; set; } = new();
+    public List<CustomCleanupRule> CustomRules { get; set; } = new();
     public long TotalLifetimeFreedBytes { get; set; }
 }
 

@@ -9,19 +9,21 @@ public sealed record CleanupTarget(
     string SearchPattern = "*",
     bool Recursive = true,
     bool DeleteEmptySubdirectories = false,
-    bool RespectMinimumAge = false)
+    bool RespectMinimumAge = false,
+    bool MoveToRecycleBin = false)
 {
     public static CleanupTarget Directory(
         string path,
         string searchPattern = "*",
         bool recursive = true,
         bool deleteEmptySubdirectories = true,
-        bool respectMinimumAge = false) =>
-        new(TargetKind.DirectoryContents, path, searchPattern, recursive, deleteEmptySubdirectories, respectMinimumAge);
+        bool respectMinimumAge = false,
+        bool moveToRecycleBin = false) =>
+        new(TargetKind.DirectoryContents, path, searchPattern, recursive, deleteEmptySubdirectories, respectMinimumAge, moveToRecycleBin);
 
     public static CleanupTarget RecycleBin() =>
-        new(TargetKind.RecycleBin, "shell:RecycleBinFolder", "*", false, false, false);
+        new(TargetKind.RecycleBin, "shell:RecycleBinFolder", "*", false, false, false, false);
 
     public static CleanupTarget DnsCache() =>
-        new(TargetKind.DnsCache, "system:DnsResolverCache", "*", false, false, false);
+        new(TargetKind.DnsCache, "system:DnsResolverCache", "*", false, false, false, false);
 }

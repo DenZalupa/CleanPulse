@@ -20,11 +20,16 @@ public sealed class CleanerEngine
 {
     private readonly IShellRecycleBin _recycleBin;
     private readonly IDnsCacheFlusher _dnsFlusher;
+    private readonly IFileDeletionService _fileDeleter;
 
-    public CleanerEngine(IShellRecycleBin recycleBin, IDnsCacheFlusher dnsFlusher)
+    public CleanerEngine(
+        IShellRecycleBin recycleBin,
+        IDnsCacheFlusher dnsFlusher,
+        IFileDeletionService? fileDeleter = null)
     {
         _recycleBin = recycleBin;
         _dnsFlusher = dnsFlusher;
+        _fileDeleter = fileDeleter ?? new WindowsFileDeletionService();
     }
 
     public Task<CategoryScanResult> AnalyzeCategoryAsync(
@@ -309,7 +314,7 @@ public sealed class CleanerEngine
         }
     }
 
-    private static void ProcessDirectoryTarget(
+    private void ProcessDirectoryTarget(
         string categoryId,
         CleanupTarget target,
         bool dryRun,
@@ -448,7 +453,7 @@ public sealed class CleanerEngine
                     }
                     else
                     {
-                        if (TryDeleteFile(file))
+                        if (_fileDeleter.TryDeleteFile(file, target.MoveToRecycleBin))
                         {
                             cleanedBytes += length;
                             cleanedCount++;
@@ -525,32 +530,6 @@ public sealed class CleanerEngine
             return (utcNow.UtcDateTime - newestUtc) >= minimumAge;
         }
         catch
-        {
-            return false;
-        }
-    }
-
-    private static bool TryDeleteFile(FileInfo file)
-    {
-        try
-        {
-            if ((file.Attributes & FileAttributes.ReadOnly) != 0)
-            {
-                file.Attributes &= ~FileAttributes.ReadOnly;
-            }
-
-            file.Delete();
-            return true;
-        }
-        catch (IOException)
-        {
-            return false;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return false;
-        }
-        catch (SecurityException)
         {
             return false;
         }

@@ -1,12 +1,13 @@
 namespace CleanPulse.Core.Services;
 
 /// <summary>
-/// Enforces hard safety boundaries so the cleaner can never touch OS core or personal user folders.
+/// Enforces hard safety boundaries so automated and manual cleanup cannot damage OS core or personal libraries.
 /// </summary>
 public static class SafetyGuard
 {
-    private static readonly Lazy<HashSet<string>> ExactProtectedPaths = new(BuildExactProtectedPaths);
-    private static readonly Lazy<List<string>> ProtectedSubtrees = new(BuildProtectedSubtrees);
+    private static readonly Lazy<HashSet<string>> ExactOsPaths = new(BuildExactOsPaths);
+    private static readonly Lazy<List<string>> ProtectedOsSubtrees = new(BuildProtectedOsSubtrees);
+    private static readonly Lazy<List<string>> PersonalLibrarySubtrees = new(BuildPersonalLibrarySubtrees);
 
     /// <summary>
     /// Normalizes a filesystem path for safe comparison. Returns null if the path is invalid.
@@ -42,9 +43,30 @@ public static class SafetyGuard
     }
 
     /// <summary>
-    /// Returns true if the path points to a drive root, Windows core directory, or personal user library.
+    /// Strict check for automated cleaner categories and custom cleanup rules:
+    /// blocks drive roots, core Windows/Program Files paths, AND personal user libraries (Desktop, Documents, Downloads, etc.).
     /// </summary>
     public static bool IsProtectedPath(string? rawPath)
+    {
+        if (IsProtectedOsPath(rawPath))
+        {
+            return true;
+        }
+
+        string? normalized = TryNormalizePath(rawPath);
+        if (normalized is null)
+        {
+            return true;
+        }
+
+        return MatchesAnySubtree(normalized, PersonalLibrarySubtrees.Value);
+    }
+
+    /// <summary>
+    /// Core OS protection check used before manual deletion in Disk Analyzer or Duplicate Finder:
+    /// blocks drive roots, Windows/System32/WinSxS/Program Files/UserProfile root, while allowing user data subfolders.
+    /// </summary>
+    public static bool IsProtectedOsPath(string? rawPath)
     {
         string? normalized = TryNormalizePath(rawPath);
         if (normalized is null)
@@ -63,29 +85,16 @@ public static class SafetyGuard
             }
         }
 
-        if (ExactProtectedPaths.Value.Contains(normalized))
+        if (ExactOsPaths.Value.Contains(normalized))
         {
             return true;
         }
 
-        foreach (string subtree in ProtectedSubtrees.Value)
-        {
-            if (string.Equals(normalized, subtree, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-
-            if (normalized.StartsWith(subtree + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return MatchesAnySubtree(normalized, ProtectedOsSubtrees.Value);
     }
 
     /// <summary>
-    /// Returns true when the given directory is safe to traverse and does not cross a symlink/junction.
+    /// Returns true when the given directory is safe for automated cleaner traversal and is not a symlink/junction.
     /// </summary>
     public static bool IsDirectorySafe(string? directoryPath)
     {
@@ -94,6 +103,41 @@ public static class SafetyGuard
             return false;
         }
 
+        return IsNonReparseDirectoryOrMissing(directoryPath);
+    }
+
+    /// <summary>
+    /// Returns true when the given directory can be safely inspected (read-only) without crossing a symlink/junction.
+    /// Allows drive roots and personal folders for Disk Analyzer / Duplicate Finder.
+    /// </summary>
+    public static bool IsDirectorySafeForAnalysis(string? directoryPath)
+    {
+        string? normalized = TryNormalizePath(directoryPath);
+        if (normalized is null || !Directory.Exists(normalized))
+        {
+            return false;
+        }
+
+        try
+        {
+            var info = new DirectoryInfo(normalized);
+            // Drive roots (e.g. C:\) have Attributes Directory (and sometimes Hidden/System), never ReparsePoint.
+            return !IsReparsePoint(info);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Detects junctions and symbolic links so recursive traversal never escapes or loops.
+    /// </summary>
+    public static bool IsReparsePoint(FileSystemInfo info) =>
+        (info.Attributes & FileAttributes.ReparsePoint) != 0;
+
+    private static bool IsNonReparseDirectoryOrMissing(string? directoryPath)
+    {
         string? normalized = TryNormalizePath(directoryPath);
         if (normalized is null)
         {
@@ -116,13 +160,21 @@ public static class SafetyGuard
         }
     }
 
-    /// <summary>
-    /// Detects junctions and symbolic links so recursive cleanup never escapes its target directory.
-    /// </summary>
-    public static bool IsReparsePoint(FileSystemInfo info) =>
-        (info.Attributes & FileAttributes.ReparsePoint) != 0;
+    private static bool MatchesAnySubtree(string normalized, List<string> subtrees)
+    {
+        foreach (string subtree in subtrees)
+        {
+            if (string.Equals(normalized, subtree, StringComparison.OrdinalIgnoreCase) ||
+                normalized.StartsWith(subtree + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
 
-    private static HashSet<string> BuildExactProtectedPaths()
+        return false;
+    }
+
+    private static HashSet<string> BuildExactOsPaths()
     {
         var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -154,7 +206,7 @@ public static class SafetyGuard
         return set;
     }
 
-    private static List<string> BuildProtectedSubtrees()
+    private static List<string> BuildProtectedOsSubtrees()
     {
         var list = new List<string>();
 
@@ -171,6 +223,33 @@ public static class SafetyGuard
         Add(Environment.GetFolderPath(Environment.SpecialFolder.SystemX86));
         Add(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles));
         Add(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86));
+
+        string windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        if (!string.IsNullOrWhiteSpace(windows))
+        {
+            Add(Path.Combine(windows, "WinSxS"));
+            Add(Path.Combine(windows, "Boot"));
+            Add(Path.Combine(windows, "Fonts"));
+            Add(Path.Combine(windows, "servicing"));
+            Add(Path.Combine(windows, "SystemApps"));
+        }
+
+        return list;
+    }
+
+    private static List<string> BuildPersonalLibrarySubtrees()
+    {
+        var list = new List<string>();
+
+        void Add(string? path)
+        {
+            string? normalized = TryNormalizePath(path);
+            if (normalized is not null && !list.Contains(normalized, StringComparer.OrdinalIgnoreCase))
+            {
+                list.Add(normalized);
+            }
+        }
+
         Add(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory));
         Add(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments));
         Add(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures));
@@ -182,16 +261,6 @@ public static class SafetyGuard
         {
             Add(Path.Combine(userProfile, "Downloads"));
             Add(Path.Combine(userProfile, "OneDrive"));
-        }
-
-        string windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
-        if (!string.IsNullOrWhiteSpace(windows))
-        {
-            Add(Path.Combine(windows, "WinSxS"));
-            Add(Path.Combine(windows, "Boot"));
-            Add(Path.Combine(windows, "Fonts"));
-            Add(Path.Combine(windows, "servicing"));
-            Add(Path.Combine(windows, "SystemApps"));
         }
 
         return list;

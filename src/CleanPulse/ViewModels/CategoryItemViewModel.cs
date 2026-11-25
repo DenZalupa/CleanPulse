@@ -5,12 +5,20 @@ using CleanPulse.Localization;
 
 namespace CleanPulse.ViewModels;
 
+public enum InspectorSortMode
+{
+    SizeDesc,
+    NameAsc,
+    DateDesc
+}
+
 public sealed record ScannedItemViewModel(
     string DisplayName,
     string FullPath,
     string SizeText,
     string ModifiedText,
     long SizeBytes,
+    DateTimeOffset LastModifiedUtc,
     bool IsSpecialAction)
 {
     public static ScannedItemViewModel FromModel(ScannedItem item, string language) =>
@@ -20,6 +28,7 @@ public sealed record ScannedItemViewModel(
             SizeText: item.IsSpecialAction && item.SizeBytes == 0 ? "—" : ByteFormatter.Format(item.SizeBytes, language),
             ModifiedText: item.IsSpecialAction ? "—" : item.LastModifiedUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm"),
             SizeBytes: item.SizeBytes,
+            LastModifiedUtc: item.LastModifiedUtc,
             IsSpecialAction: item.IsSpecialAction);
 }
 
@@ -27,20 +36,27 @@ public sealed class CategoryItemViewModel : ObservableObject
 {
     private bool _isChecked;
     private CategoryScanResult _result;
+    private bool _isBrowserOpen;
+    private string _inspectorFilterText = string.Empty;
+    private InspectorSortMode _sortMode = InspectorSortMode.SizeDesc;
     private readonly bool _isAdmin;
+    private readonly IProcessDetector _processDetector;
     private readonly Action<CategoryItemViewModel> _onSelectionChanged;
 
     public CategoryItemViewModel(
         CleanupCategory model,
         bool isChecked,
         bool isAdmin,
+        IProcessDetector processDetector,
         Action<CategoryItemViewModel> onSelectionChanged)
     {
         Model = model;
         _isChecked = isChecked;
         _isAdmin = isAdmin;
+        _processDetector = processDetector;
         _result = CategoryScanResult.Empty(model.Id);
         _onSelectionChanged = onSelectionChanged;
+        RefreshProcessWarning();
     }
 
     public CleanupCategory Model { get; }
@@ -50,6 +66,13 @@ public sealed class CategoryItemViewModel : ObservableObject
     public bool RequiresAdmin => Model.RequiresAdmin;
     public bool ShowAdminBadge => Model.RequiresAdmin && !_isAdmin;
     public bool IsCaution => Model.IsCaution;
+    public bool IsCustomRule => Model.IsCustomRule;
+
+    public bool IsBrowserOpen
+    {
+        get => _isBrowserOpen;
+        private set => SetProperty(ref _isBrowserOpen, value);
+    }
 
     public bool IsChecked
     {
@@ -72,19 +95,75 @@ public sealed class CategoryItemViewModel : ObservableObject
         {
             if (SetProperty(ref _result, value))
             {
+                RefreshProcessWarning();
                 RefreshLocalizedProperties();
             }
         }
     }
 
-    public string Title => Loc.Instance[Model.TitleKey];
-    public string Description => Loc.Instance[Model.DescriptionKey];
+    public string InspectorFilterText
+    {
+        get => _inspectorFilterText;
+        set
+        {
+            if (SetProperty(ref _inspectorFilterText, value))
+            {
+                OnPropertyChanged(nameof(PreviewItems));
+            }
+        }
+    }
+
+    public InspectorSortMode SortMode
+    {
+        get => _sortMode;
+        set
+        {
+            if (SetProperty(ref _sortMode, value))
+            {
+                OnPropertyChanged(nameof(PreviewItems));
+                OnPropertyChanged(nameof(IsSortSize));
+                OnPropertyChanged(nameof(IsSortName));
+                OnPropertyChanged(nameof(IsSortDate));
+            }
+        }
+    }
+
+    public bool IsSortSize
+    {
+        get => SortMode == InspectorSortMode.SizeDesc;
+        set { if (value) SortMode = InspectorSortMode.SizeDesc; }
+    }
+
+    public bool IsSortName
+    {
+        get => SortMode == InspectorSortMode.NameAsc;
+        set { if (value) SortMode = InspectorSortMode.NameAsc; }
+    }
+
+    public bool IsSortDate
+    {
+        get => SortMode == InspectorSortMode.DateDesc;
+        set { if (value) SortMode = InspectorSortMode.DateDesc; }
+    }
+
+    public string Title => !string.IsNullOrEmpty(Model.DisplayNameOverride)
+        ? Model.DisplayNameOverride
+        : Loc.Instance[Model.TitleKey];
+
+    public string Description => !string.IsNullOrEmpty(Model.DescriptionOverride)
+        ? Model.DescriptionOverride
+        : Loc.Instance[Model.DescriptionKey];
+
     public string SafetyNote => Loc.Instance[Model.SafetyNoteKey];
+
     public string GroupTitle => Model.Group switch
     {
         CleanupGroup.SystemAndTemp => Loc.Instance["group_system_temp"],
         CleanupGroup.WindowsCache => Loc.Instance["group_windows_cache"],
+        CleanupGroup.Browsers => Loc.Instance["group_browsers"],
+        CleanupGroup.DevAndApps => Loc.Instance["group_dev_apps"],
         CleanupGroup.LogsAndDumps => Loc.Instance["group_logs_dumps"],
+        CleanupGroup.CustomRules => Loc.Instance["group_custom_rules"],
         _ => string.Empty
     };
 
@@ -130,8 +209,35 @@ public sealed class CategoryItemViewModel : ObservableObject
     public bool ShowTruncatedNotice => _result.Items.Count < _result.FileCount && _result.Items.Count > 0;
     public string TruncatedNoticeText => Loc.Instance.Format("inspector_truncated_note", _result.FileCount.ToString("N0"));
 
-    public IReadOnlyList<ScannedItemViewModel> PreviewItems =>
-        _result.Items.Select(i => ScannedItemViewModel.FromModel(i, Loc.Instance.Language)).ToList();
+    public IReadOnlyList<ScannedItemViewModel> PreviewItems
+    {
+        get
+        {
+            IEnumerable<ScannedItem> query = _result.Items;
+            if (!string.IsNullOrWhiteSpace(_inspectorFilterText))
+            {
+                string filter = _inspectorFilterText.Trim();
+                query = query.Where(i =>
+                    i.DisplayName.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
+                    i.FullPath.Contains(filter, StringComparison.OrdinalIgnoreCase));
+            }
+
+            query = _sortMode switch
+            {
+                InspectorSortMode.NameAsc => query.OrderBy(i => i.DisplayName, StringComparer.OrdinalIgnoreCase),
+                InspectorSortMode.DateDesc => query.OrderByDescending(i => i.LastModifiedUtc),
+                _ => query.OrderByDescending(i => i.SizeBytes)
+            };
+
+            return query.Select(i => ScannedItemViewModel.FromModel(i, Loc.Instance.Language)).ToList();
+        }
+    }
+
+    public void RefreshProcessWarning()
+    {
+        IsBrowserOpen = !string.IsNullOrWhiteSpace(Model.ProcessNameToWarn) &&
+                        _processDetector.IsProcessRunning(Model.ProcessNameToWarn);
+    }
 
     public void RefreshLocalizedProperties()
     {

@@ -1,75 +1,80 @@
 # CleanPulse
 
-**CleanPulse** — локальная, безопасная и лёгкая утилита очистки Windows (по типу CCleaner) без телеметрии, рекламы и фоновых служб. Написана на **C# / .NET 9 (WPF)** с поддержкой светлой/тёмной темы и переключением языка **Русский / English** прямо в интерфейсе.
+**CleanPulse v1.1** — локальный, безопасный и лёгкий комбайн для очистки и обслуживания Windows (по типу CCleaner) без телеметрии, рекламы и фоновых служб. Построен на **C# / .NET 9 (WPF)** с поддержкой тёмной/светлой темы и мгновенным переключением **Русский / English**.
 
-> Local, lightweight, telemetry-free Windows system & temporary file cleaner built with **C# / .NET 9 (WPF)**, featuring live RU/EN localization and Dark/Light themes.
+> Local, telemetry-free Windows cleaner and system maintenance toolkit built with **C# / .NET 9 (WPF)**, featuring live RU/EN localization, Dark/Light themes, and CLI automation.
 
 ---
 
 ## Возможности / Features
 
-- **Двухэтапная проверка (`Анализ` → `Очистка`) / Two-step `Analyze` → `Clean`:**
-  Сначала безопасно оценивает объём мусора, показывает размеры по категориям и список крупнейших найденных файлов, и только затем удаляет выбранное.
-- **Категории очистки / Cleanup Categories:**
-  - *Система и временные файлы:* `%TEMP%`, `C:\Windows\Temp`, Корзина (`SHQueryRecycleBinW` / `SHEmptyRecycleBinW`), кэш эскизов и иконок (`thumbcache_*.db`, `iconcache_*.db`), недавние документы (опционально), кэш шейдеров DirectX (опционально).
-  - *Кэш Windows и сеть:* кэш обновлений Windows (`SoftwareDistribution\Download`), кэш оптимизации доставки (`Delivery Optimization`), `Prefetch` (опционально), сброс DNS-кэша (`DnsFlushResolverCache`).
-  - *Логи, отчёты и дампы:* отчёты об ошибках Windows (WER), дампы сбоев `.dmp` (опционально), журналы CBS / DISM / Panther / setupapi / WindowsUpdate.
-- **Встроенные гарантии безопасности / Built-in Safety Guards:**
-  - Жёсткая блокировка системных (`Windows`, `System32`, `WinSxS`, `Program Files`) и личных директорий (`Рабочий стол`, `Документы`, `Загрузки`, `Изображения` и т.д.).
-  - Защита от перехода по символическим ссылкам и точкам соединения (`ReparsePoint`).
-  - Фильтр минимального возраста временных файлов (по умолчанию 24 часа, настраивается: 0 ч / 1 ч / 24 ч / 7 дней).
-  - Аккуратный пропуск занятых системой файлов без падений.
-  - Гибкие пользовательские **Исключения** (пути, папки, маски вроде `*.dmp`) и кнопка **«Запустить как админ»** прямо из интерфейса.
-- **Журнал операций / History & Export:**
-  Локальный лог всех анализов и очисток, счётчик освобождённого места и экспорт отчёта в `.txt`.
-- **100% локально / 100% Local:**
-  Все настройки (`settings.json`) и история (`history.json`) хранятся локально в `%LOCALAPPDATA%\CleanPulse`.
+### 1. Очистка системы, браузеров и кэшей / System, Browser & Dev Cleaner
+- Двухэтапный режим **Анализ → Очистка** с фильтрацией, сортировкой и отправкой отдельных файлов в Корзину прямо из инспектора.
+- **Система и временные файлы:** `%TEMP%`, `C:\Windows\Temp`, Корзина (`SHQueryRecycleBinW` / `SHEmptyRecycleBinW`), кэш эскизов и иконок (`thumbcache_*.db`, `iconcache_*.db`), недавние документы, DirectX `D3DSCache`, кэш видеодрайверов **NVIDIA / AMD / Intel**.
+- **Кэш Windows и сеть:** `SoftwareDistribution\Download`, Delivery Optimization, `Prefetch`, обнаружение `C:\Windows.old`, сброс DNS-кэша (`DnsFlushResolverCache`), а также кнопка запуска встроенной очистки компонентов **WinSxS через DISM** (`/StartComponentCleanup`).
+- **Браузеры (только кэш):** Chrome, Edge, Яндекс Браузер, Firefox, Opera / Opera GX — удаляется только `Cache / Code Cache / GPUCache / cache2` всех профилей с определением запущенного процесса. Пароли, cookies, история и вкладки **не затрагиваются**.
+- **Инструменты разработки:** HTTP-кэш NuGet (`v3-cache`, `plugins-cache`), `pip\Cache`, `npm-cache`, кэш и логи VS Code.
+- **Логи и дампы:** отчёты об ошибках WER, дампы `.dmp` (`CrashDumps`, `Minidump`), системные журналы CBS / DISM / Panther / setupapi / WindowsUpdate.
+
+### 2. Анализатор места на диске / Disk Space Analyzer
+- Однопроходное сканирование выбранного диска или папки с защитой от зацикливания по junctions/symlinks.
+- Рейтинг крупнейших папок (с возможностью «провалиться» глубже) и **Топ-150 самых больших файлов** с фильтрами (`Архивы`, `Образы .iso`, `Установщики`, `Медиа`, `Временные/Дампы`) и быстрым перемещением в Корзину.
+
+### 3. Поиск дубликатов / Duplicate File Finder
+- Трёхэтапное точное сравнение (**размер → 4 КБ заголовок → полный SHA-256**) в выбранной папке.
+- Быстрое выделение копий (*оставить старые* или *оставить новые*) с безопасным удалением в Корзину.
+
+### 4. Менеджер автозагрузки / Startup Manager
+- Просмотр программ из `HKCU\...\Run`, `HKLM\...\Run` и папок «Автозагрузка».
+- Безопасное включение/отключение через официальный механизм Windows **`StartupApproved`** (совместимо с Диспетчером задач Windows — без удаления записей).
+
+### 5. Пользовательские правила, исключения и автоматизация / Custom Rules, CLI & Scheduler
+- **Свои папки для очистки** с маской файлов и выбором «В Корзину» / «Навсегда» (с жёсткой проверкой `SafetyGuard`).
+- **Исключения** по путям, папкам или маскам (`*.dmp`, `D:\Work\Temp`).
+- **CLI-режим и Планировщик Windows:**
+  ```powershell
+  CleanPulse.exe --analyze
+  CleanPulse.exe --clean-safe --silent
+  CleanPulse.exe --clean-selected
+  ```
+  В настройках можно в один клик создать или удалить задачу в Планировщике Windows (`CleanPulseAutoClean`).
 
 ---
 
-## Структура проекта / Project Structure
+## Встроенные гарантии безопасности / Safety Guarantees
 
-```text
-CleanPulse/
-├── CleanPulse.sln
-├── src/
-│   ├── CleanPulse.Core/        # Движок сканирования, SafetyGuard, Win32 адаптеры, локализация
-│   └── CleanPulse/             # WPF-приложение (MVVM, Dark/Light темы, иконка, UI)
-├── tests/
-│   └── CleanPulse.Tests/       # Автотесты безопасности, фильтрации, очистки и UI smoke-тест
-├── scripts/
-│   └── publish.ps1             # Скрипт сборки CleanPulse.exe в ./dist
-└── .github/workflows/ci.yml    # GitHub Actions CI (build, test, artifact)
-```
+- Системные пути (`Windows`, `System32`, `WinSxS`, `Program Files`) защищены на уровне кода `SafetyGuard`.
+- Личные библиотеки (`Рабочий стол`, `Документы`, `Загрузки`, `Изображения`, `Музыка`, `Видео`) заблокированы для автоматической очистки и пользовательских правил.
+- Символические ссылки и точки соединения (`ReparsePoint`) никогда не обходятся.
+- Временные файлы очищаются только если они старше выбранного порога возраста (по умолчанию 24 часа).
+- Все настройки и история хранятся 100% локально в `%LOCALAPPDATA%\CleanPulse`.
 
 ---
 
-## Сборка и запуск / Build & Run
+## Сборка, тесты и релиз / Build, Test & Publish
 
 ### Требования / Prerequisites
 - Windows 10 / Windows 11 (x64)
 - [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
 
-### Запуск из исходников / Run from source
+### Сборка и запуск тестов
 ```powershell
 dotnet build CleanPulse.sln -c Release
-dotnet run --project src/CleanPulse/CleanPulse.csproj -c Release
+dotnet run --project tests/CleanPulse.Tests/CleanPulse.Tests.csproj -c Release --no-build
 ```
 
-### Запуск тестов / Run automated tests
-```powershell
-dotnet run --project tests/CleanPulse.Tests/CleanPulse.Tests.csproj -c Release
-```
-
-### Сборка локального `.exe` / Publish `.exe`
+### Сборка локального `.exe`
 ```powershell
 .\scripts\publish.ps1
 # Однофайловый exe (использует установленный .NET 9 Desktop Runtime):
 .\scripts\publish.ps1 -SingleFile
-# Или полностью автономный exe (без зависимости от установленного .NET Desktop Runtime):
+# Или полностью автономный exe (без зависимости от .NET Desktop Runtime):
 .\scripts\publish.ps1 -SelfContained
 ```
-Готовый файл появится в `dist\CleanPulse.exe`.
+
+### GitHub Actions & Releases
+- [ci.yml](.github/workflows/ci.yml) автоматически собирает и тестирует каждый push в `main`.
+- [release.yml](.github/workflows/release.yml) при пуше тега `v*` (например `v1.1.0`) автоматически собирает `CleanPulse-win-x64.exe` и `CleanPulse-win-x64-standalone.exe` и создаёт GitHub Release.
 
 ---
 

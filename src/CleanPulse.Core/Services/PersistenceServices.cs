@@ -36,6 +36,7 @@ public sealed class SettingsService
             var loaded = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions) ?? new AppSettings();
             loaded.CategorySelection = new Dictionary<string, bool>(loaded.CategorySelection ?? new(), StringComparer.OrdinalIgnoreCase);
             loaded.Exclusions ??= new List<string>();
+            loaded.CustomRules ??= new List<CustomCleanupRule>();
             if (loaded.Language is not ("ru" or "en"))
             {
                 loaded.Language = "ru";

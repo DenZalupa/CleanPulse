@@ -12,4 +12,8 @@ public sealed record CleanupCategory(
     bool RequiresAdmin,
     bool IsRecommendedDefault,
     bool IsCaution,
-    IReadOnlyList<CleanupTarget> Targets);
+    IReadOnlyList<CleanupTarget> Targets,
+    string? DisplayNameOverride = null,
+    string? DescriptionOverride = null,
+    string? ProcessNameToWarn = null,
+    bool IsCustomRule = false);

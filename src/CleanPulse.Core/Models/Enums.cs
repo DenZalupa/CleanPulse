@@ -7,7 +7,10 @@ public enum CleanupGroup
 {
     SystemAndTemp,
     WindowsCache,
-    LogsAndDumps
+    LogsAndDumps,
+    Browsers,
+    DevAndApps,
+    CustomRules
 }
 
 /// <summary>
@@ -34,4 +37,39 @@ public enum CategoryStatus
     NotFound,
     Cancelled,
     Error
+}
+
+/// <summary>
+/// Frequency for optional Windows Task Scheduler auto-cleanup.
+/// </summary>
+public enum ScheduleFrequency
+{
+    Disabled,
+    Daily,
+    Weekly,
+    Monthly
+}
+
+/// <summary>
+/// Windows autostart location scope.
+/// </summary>
+public enum StartupScope
+{
+    CurrentUserRun,
+    LocalMachineRun,
+    CurrentUserStartupFolder,
+    CommonStartupFolder
+}
+
+/// <summary>
+/// File classification used by Disk Analyzer filters.
+/// </summary>
+public enum DiskFileCategory
+{
+    All,
+    Archives,
+    DiskImages,
+    Installers,
+    Media,
+    TempAndDumps
 }
