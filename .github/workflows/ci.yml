@@ -1,0 +1,35 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Build solution (Release)
+        run: dotnet build CleanPulse.sln -c Release
+
+      - name: Run automated tests
+        run: dotnet run --project tests/CleanPulse.Tests/CleanPulse.Tests.csproj -c Release --no-build
+
+      - name: Publish single-file executable
+        run: dotnet publish src/CleanPulse/CleanPulse.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o dist
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CleanPulse-win-x64
+          path: dist/CleanPulse.exe

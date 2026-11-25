@@ -1,0 +1,28 @@
+namespace CleanPulse.Core.Models;
+
+/// <summary>
+/// User preferences persisted locally in %LOCALAPPDATA%\CleanPulse\settings.json.
+/// </summary>
+public sealed class AppSettings
+{
+    public string Language { get; set; } = "ru";
+    public string Theme { get; set; } = "Dark";
+    public int MinimumFileAgeHours { get; set; } = 24;
+    public bool ConfirmBeforeClean { get; set; } = true;
+    public Dictionary<string, bool> CategorySelection { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public List<string> Exclusions { get; set; } = new();
+    public long TotalLifetimeFreedBytes { get; set; }
+}
+
+/// <summary>
+/// Represents disk capacity statistics for display in the UI.
+/// </summary>
+public sealed record DriveSpaceInfo(
+    string DriveName,
+    string VolumeLabel,
+    long TotalBytes,
+    long FreeBytes)
+{
+    public long UsedBytes => Math.Max(0, TotalBytes - FreeBytes);
+    public double UsedPercentage => TotalBytes > 0 ? Math.Round((double)UsedBytes / TotalBytes * 100.0, 1) : 0;
+}

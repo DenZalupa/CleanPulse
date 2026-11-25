@@ -1,0 +1,34 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="WindowBgBrush" Color="#0B1120"/>
+    <SolidColorBrush x:Key="SidebarBgBrush" Color="#0F172A"/>
+    <SolidColorBrush x:Key="CardBgBrush" Color="#151F32"/>
+    <SolidColorBrush x:Key="CardElevatedBgBrush" Color="#1C2940"/>
+    <SolidColorBrush x:Key="CardHoverBgBrush" Color="#22324D"/>
+    <SolidColorBrush x:Key="CardSelectedBgBrush" Color="#15323E"/>
+    <SolidColorBrush x:Key="InputBgBrush" Color="#0F172A"/>
+    <SolidColorBrush x:Key="BorderSubtleBrush" Color="#263449"/>
+    <SolidColorBrush x:Key="BorderFocusBrush" Color="#14B8A6"/>
+
+    <SolidColorBrush x:Key="AccentBrush" Color="#14B8A6"/>
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="#0D9488"/>
+    <SolidColorBrush x:Key="AccentForegroundBrush" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="AccentSoftBrush" Color="#13383B"/>
+
+    <SolidColorBrush x:Key="SecondaryAccentBrush" Color="#38BDF8"/>
+    <SolidColorBrush x:Key="SecondarySoftBrush" Color="#132D46"/>
+
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F1F5F9"/>
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#94A3B8"/>
+    <SolidColorBrush x:Key="TextMutedBrush" Color="#64748B"/>
+
+    <SolidColorBrush x:Key="WarningBgBrush" Color="#352814"/>
+    <SolidColorBrush x:Key="WarningFgBrush" Color="#FBBF24"/>
+    <SolidColorBrush x:Key="DangerBgBrush" Color="#3B1824"/>
+    <SolidColorBrush x:Key="DangerFgBrush" Color="#FB7185"/>
+    <SolidColorBrush x:Key="SuccessBgBrush" Color="#12342C"/>
+    <SolidColorBrush x:Key="SuccessFgBrush" Color="#34D399"/>
+
+    <SolidColorBrush x:Key="ScrollThumbBrush" Color="#334155"/>
+    <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="#475569"/>
+</ResourceDictionary>
