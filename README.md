@@ -1,8 +1,8 @@
 # CleanPulse
 
-**CleanPulse v1.1** — локальный, безопасный и лёгкий комбайн для очистки и обслуживания Windows (по типу CCleaner) без телеметрии, рекламы и фоновых служб. Построен на **C# / .NET 9 (WPF)** с поддержкой тёмной/светлой темы и мгновенным переключением **Русский / English**.
+**CleanPulse v1.2** — локальный, безопасный и лёгкий комбайн для очистки и обслуживания Windows (по типу CCleaner) без телеметрии, рекламы и фоновых служб. Построен на **C# / .NET 9 (WPF)** в стиле **Liquid Glass (Жидкое стекло)** без неонового свечения с темами **Светлое стекло / Дымчатое стекло** и мгновенным переключением **Русский / English**.
 
-> Local, telemetry-free Windows cleaner and system maintenance toolkit built with **C# / .NET 9 (WPF)**, featuring live RU/EN localization, Dark/Light themes, and CLI automation.
+> Local, telemetry-free Windows cleaner and system maintenance toolkit built with **C# / .NET 9 (WPF)**, featuring an Apple-inspired silver-white **Liquid Glass** UI (zero neon), live RU/EN localization, and CLI automation.
 
 ---
 

@@ -75,12 +75,14 @@ public sealed class WpfUiPlatformService : IUiPlatformService
             return;
         }
 
-        string sourceUri = string.Equals(themeName, "Light", StringComparison.OrdinalIgnoreCase)
-            ? "Themes/LightTheme.xaml"
-            : "Themes/DarkTheme.xaml";
+        bool isDark = !string.Equals(themeName, "Light", StringComparison.OrdinalIgnoreCase);
+        string fileName = isDark ? "DarkTheme.xaml" : "LightTheme.xaml";
 
         var merged = app.Resources.MergedDictionaries;
-        var newTheme = new ResourceDictionary { Source = new Uri(sourceUri, UriKind.Relative) };
+        var newTheme = new ResourceDictionary
+        {
+            Source = new Uri($"pack://application:,,,/CleanPulse;component/Themes/{fileName}", UriKind.Absolute)
+        };
 
         if (merged.Count > 0)
         {
@@ -89,6 +91,11 @@ public sealed class WpfUiPlatformService : IUiPlatformService
         else
         {
             merged.Insert(0, newTheme);
+        }
+
+        if (app.MainWindow is MainWindow mw)
+        {
+            mw.ApplyWindowChromeForTheme(isDark);
         }
     }
 }

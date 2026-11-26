@@ -65,13 +65,18 @@ internal sealed class FakePrivilegeService : IPrivilegeService
 
 internal sealed class FakeUiService : IUiPlatformService
 {
+    private readonly WpfUiPlatformService _themeLoader = new();
     public string LastAppliedTheme { get; private set; } = string.Empty;
     public bool Confirm(string title, string message) => true;
     public void ShowInfo(string title, string message) { }
     public string? BrowseFolder() => null;
     public string? SaveTextFile(string defaultFileName) => null;
     public void OpenFolderInExplorer(string path) { }
-    public void ApplyTheme(string themeName) => LastAppliedTheme = themeName;
+    public void ApplyTheme(string themeName)
+    {
+        LastAppliedTheme = themeName;
+        _themeLoader.ApplyTheme(themeName);
+    }
 }
 
 internal sealed class FakeProcessDetector : IProcessDetector
@@ -602,8 +607,13 @@ internal static class Program
         AssertEx.Equal("en", Localization.Loc.Instance.Language, "Loc language should switch to en");
         AssertEx.Equal(24, vm.MinimumFileAgeHours, "MinimumFileAgeHours must survive language reload");
 
+        AssertEx.Equal("Light", vm.Theme, "Default theme should be silver-white Liquid Glass (Light)");
+        vm.Theme = "Dark";
+        AssertEx.Equal("Dark", ui.LastAppliedTheme, "Theme should switch to Dark");
+        window.UpdateLayout();
         vm.Theme = "Light";
-        AssertEx.Equal("Light", ui.LastAppliedTheme, "Theme should switch to Light");
+        AssertEx.Equal("Light", ui.LastAppliedTheme, "Theme should switch back to Light");
+        window.UpdateLayout();
 
         vm.ScheduledCleanFrequency = ScheduleFrequency.Weekly;
         AssertEx.Equal(ScheduleFrequency.Weekly, vm.ScheduledCleanFrequency, "Schedule should update");

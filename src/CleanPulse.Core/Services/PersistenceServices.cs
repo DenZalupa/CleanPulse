@@ -42,9 +42,15 @@ public sealed class SettingsService
                 loaded.Language = "ru";
             }
 
+            if (loaded.DesignVersion < 2)
+            {
+                loaded.Theme = "Light";
+                loaded.DesignVersion = 2;
+            }
+
             if (loaded.Theme is not ("Dark" or "Light"))
             {
-                loaded.Theme = "Dark";
+                loaded.Theme = "Light";
             }
 
             if (loaded.MinimumFileAgeHours < 0)

@@ -19,8 +19,9 @@ public sealed class CustomCleanupRule
 /// </summary>
 public sealed class AppSettings
 {
+    public int DesignVersion { get; set; } = 2;
     public string Language { get; set; } = "ru";
-    public string Theme { get; set; } = "Dark";
+    public string Theme { get; set; } = "Light";
     public int MinimumFileAgeHours { get; set; } = 24;
     public bool ConfirmBeforeClean { get; set; } = true;
     public bool AutoAnalyzeOnStartup { get; set; } = false;
